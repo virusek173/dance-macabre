@@ -1,0 +1,13 @@
+# Ignore everything
+*
+
+# ...even if they are in subdirectories
+!*/
+
+# But not these files...
+!.gitignore
+!skeletonModel.h
+!main_file.cpp
+!pl_szkielet06_win.cbp
+
+
