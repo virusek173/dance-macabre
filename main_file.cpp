@@ -1,24 +1,5 @@
-/*
-Niniejszy program jest wolnym oprogramowaniem; możesz go
-rozprowadzać dalej i / lub modyfikować na warunkach Powszechnej
-Licencji Publicznej GNU, wydanej przez Fundację Wolnego
-Oprogramowania - według wersji 2 tej Licencji lub(według twojego
-wyboru) którejś z późniejszych wersji.
-
-Niniejszy program rozpowszechniany jest z nadzieją, iż będzie on
-użyteczny - jednak BEZ JAKIEJKOLWIEK GWARANCJI, nawet domyślnej
-gwarancji PRZYDATNOŚCI HANDLOWEJ albo PRZYDATNOŚCI DO OKREŚLONYCH
-ZASTOSOWAŃ.W celu uzyskania bliższych informacji sięgnij do
-Powszechnej Licencji Publicznej GNU.
-
-Z pewnością wraz z niniejszym programem otrzymałeś też egzemplarz
-Powszechnej Licencji Publicznej GNU(GNU General Public License);
-jeśli nie - napisz do Free Software Foundation, Inc., 59 Temple
-Place, Fifth Floor, Boston, MA  02110 - 1301  USA
-*/
-
 #define GLM_FORCE_RADIANS
-
+#include <iostream>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -30,13 +11,14 @@ Place, Fifth Floor, Boston, MA  02110 - 1301  USA
 #include "constants.h"
 #include "skeleton.h"
 #include "skeletonModel.h"
-
+#include "colors.h"
 
 using namespace glm;
 
 float aspect=1.0f; //Aktualny stosunek szerokości do wysokości okna
 float speed_x=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi x
 float speed_y=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
+GLuint tex; //uchwyt do obrazka tekstury
 
 //Procedura obsługi błędów
 void error_callback(int error, const char* description) {
@@ -74,22 +56,41 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 	glClearColor(0,0,0,1); //Ustaw kolor czyszczenia ekranu
 
-	//glEnable(GL_LIGHTING); //Włącz tryb cieniowania
+    glEnable(GL_LIGHTING); //Włącz tryb cieniowania
 	glEnable(GL_LIGHT0); //Włącz zerowe źródło światła
 	glEnable(GL_DEPTH_TEST); //Włącz używanie budora głębokości
 	glEnable(GL_COLOR_MATERIAL); //Włącz śledzenie kolorów przez materiał
+
+	glShadeModel(GL_SMOOTH);
+
+
+	//Wczytanie i import obrazka – w initOpenGLProgram
+	//Wczytanie do pamięci komputera
+	std::vector<unsigned char> image; //Alokuj wektor do wczytania obrazka
+	unsigned width, height; //Zmienne do których wczytamy wymiary obrazka
+	//Wczytaj obrazek
+	unsigned error = lodepng::decode(image, width, height, "metal.png");
+	//Import do pamięci karty graficznej
+	glGenTextures(1,&tex); //Zainicjuj jeden uchwyt
+	glBindTexture(GL_TEXTURE_2D, tex); //Uaktywnij uchwyt
+	//Wczytaj obrazek do pamięci KG skojarzonej z uchwytem
+	glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,
+	GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*) image.data());
+//
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 }
 
 //Procedura rysująca zawartość sceny
 void drawScene(GLFWwindow* window,float angle_x,float angle_y) {
 	//************Tutaj umieszczaj kod rysujący obraz******************l
-
+		mat4 M,R,T,S,I;
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT); //Wyczyść bufor kolorów (czyli przygotuj "płótno" do rysowania)
 
     //***Przygotowanie do rysowania****
     mat4 P=perspective(50.0f*PI/180.0f,aspect,1.0f,50.0f); //Wylicz macierz rzutowania P
     mat4 V=lookAt( //Wylicz macierz widoku
-                  vec3(0.0f,0.0f,-20.0f),
+                  vec3(0.0f,0.0f,20.0f),
                   vec3(0.0f,0.0f,0.0f),
                   vec3(0.0f,1.0f,0.0f));
     glMatrixMode(GL_PROJECTION); //Włącz tryb modyfikacji macierzy rzutowania
@@ -102,24 +103,35 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y) {
 
 
     //2. Rysowanie modelu
-    glEnableClientState(GL_VERTEX_ARRAY); //Podczas rysowania używaj tablicy wierzchołków
-   glEnableClientState(GL_COLOR_ARRAY); //Podczas rysowania używaj tablicy kolorów
+		glEnable(GL_TEXTURE_2D);
+		glEnable(GL_NORMALIZE);
+	  glEnableClientState(GL_VERTEX_ARRAY); //Podczas rysowania używaj tablicy wierzchołków
+  //  glEnableClientState(GL_COLOR_ARRAY); //Podczas rysowania używaj tablicy kolorów
+	 glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+	 glEnableClientState( GL_NORMAL_ARRAY );
 
 	 mat4 torsoMatrix=mat4(1.0f);
-     torsoMatrix=rotate(torsoMatrix,angle_x,vec3(0.0f,0.0f,1.0f));
+     torsoMatrix=rotate(torsoMatrix,angle_x,vec3(1.0f,0.0f,1.0f));
 
 	 glLoadMatrixf(value_ptr(V*torsoMatrix));
 
+	 float lightPos[]={0,0,-1,1};
+    glLightfv(GL_LIGHT0,GL_POSITION,lightPos);
+
     glVertexPointer(4,GL_FLOAT,0,torsoPositions);
-    glColorPointer(3,GL_FLOAT,0,torsoNormals);
+		glNormalPointer( GL_FLOAT, 0, torsoNormals);
+		glTexCoordPointer( 2, GL_FLOAT, 0, torsoTexels);
+    // glColorPointer(3,GL_FLOAT,0,torsoNormals);
     glDrawArrays(GL_QUADS,0,torsoVertices); //Rysuj model
 
 		 mat4 headMatrix=torsoMatrix;
-	   headMatrix=rotate(headMatrix,angle_y,vec3(0.0f,1.0f,0.0f));
+	   R=rotate(headMatrix,angle_y,vec3(0.0f,0.0f,1.0f));
+	   T=translate(headMatrix,vec3(0.0f,2.0f,0.0f));
+		 headMatrix=T*R;
 	   glLoadMatrixf(value_ptr(V*headMatrix));
 
      glVertexPointer(4,GL_FLOAT,0,headPositions);
-     glColorPointer(3,GL_FLOAT,0,headNormals);
+    glNormalPointer( GL_FLOAT, 0, headNormals);
      glDrawArrays(GL_QUADS,0,headVertices); //Rysuj model
 
 		 // Render prawego ramienia
@@ -133,7 +145,7 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y) {
 
 		 // Render prawego przedramienia
 		 mat4 arm_r_bMatrix = arm_r_uMatrix;
-	    arm_r_bMatrix=rotate(arm_r_bMatrix,angle_y,vec3(0.0f,0.0f,1.0f));
+	    // arm_r_bMatrix=rotate(arm_r_bMatrix,angle_y,vec3(0.0f,0.0f,1.0f));
 	   glLoadMatrixf(value_ptr(V*arm_r_bMatrix));
 
      glVertexPointer(4,GL_FLOAT,0,arm_r_bPositions);
@@ -152,7 +164,7 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y) {
 
 		 // Render prawego ramienia
 		 mat4 leg_r_uMatrix=torsoMatrix;
-	   leg_r_uMatrix=rotate(leg_r_uMatrix,angle_y,vec3(0.0f,1.0f,0.0f));
+	  //  leg_r_uMatrix=rotate(leg_r_uMatrix,angle_y,vec3(0.0f,1.0f,0.0f));
 	   glLoadMatrixf(value_ptr(V*leg_r_uMatrix));
 
      glVertexPointer(4,GL_FLOAT,0,leg_r_uPositions);
@@ -180,9 +192,11 @@ void drawScene(GLFWwindow* window,float angle_x,float angle_y) {
 
 
     //Posprzątaj po sobie
-		glDisableClientState(GL_VERTEX_ARRAY);
-    glDisableClientState(GL_COLOR_ARRAY);
 
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		glDisableClientState(GL_VERTEX_ARRAY);
+		glDisableClientState( GL_NORMAL_ARRAY );
+    // glDisableClientState(GL_COLOR_ARRAY);
 
 
     glfwSwapBuffers(window); //Przerzuć tylny bufor na przedni
@@ -237,7 +251,6 @@ int main(void)
 		drawScene(window,angle_x,angle_y); //Wykonaj procedurę rysującą
 		glfwPollEvents(); //Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
 	}
-
 	glfwDestroyWindow(window); //Usuń kontekst OpenGL i okno
 	glfwTerminate(); //Zwolnij zasoby zajęte przez GLFW
 	exit(EXIT_SUCCESS);
