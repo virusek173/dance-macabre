@@ -31,7 +31,7 @@ float leg_r_uProgress=0; //Szybkość kątowa obrotu obiektu w radianach na seku
 float leg_r_bProgress=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
 float foot_rProgress=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
 
-vec3 torsoVecDirection = vec3(0.0f,1.0f,0.0f);
+vec3 torsoVecDirection = vec3(0.0f,0.0f,0.0f);
 vec3 headVecDirection = vec3(0.0f,0.0f,0.0f);
 vec3 arm_r_uVecDirection = vec3(0.0f,0.0f,0.0f);
 vec3 arm_r_bVecDirection = vec3(0.0f,0.0f,0.0f);
@@ -163,8 +163,6 @@ void initOpenGLProgram(GLFWwindow* window) {
 			glLightf(GL_LIGHT0,GL_SPOT_EXPONENT,128);
 
 			// Render podłogi
-			// torsoMatrix=translate(torsoMatrix,vec3(0.0f,4.0f,0.0f));
-				// torsoMatrix=rotate(torsoMatrix,cameraMoving,torsoVecDirection);
 				mat4 floorMatrix=mat4(1.0f);
 				floorMatrix=rotate(floorMatrix,(PI/2),vec3(0.0f,-1.0f,0.0f));
 				floorMatrix=translate(floorMatrix,vec3(6.0f,-8.0f,0.0f));
@@ -177,7 +175,9 @@ void initOpenGLProgram(GLFWwindow* window) {
 			// Render torsu
 			mat4 torsoMatrix=mat4(1.0f);
 			torsoMatrix=translate(torsoMatrix,vec3(0.0f,4.0f,0.0f));
-				torsoMatrix=rotate(torsoMatrix,cameraMoving,torsoVecDirection);
+			if (headProgress) {
+				torsoMatrix=rotate(torsoMatrix,torsoProgress,torsoVecDirection);
+			}
 			glLoadMatrixf(value_ptr(V*torsoMatrix));
 			glVertexPointer(4,GL_FLOAT,0, torsoPositions);
 			glNormalPointer( GL_FLOAT, 0, torsoNormals);
@@ -352,10 +352,28 @@ void initOpenGLProgram(GLFWwindow* window) {
 			glfwSwapBuffers(window); //Przerzuć tylny bufor na przedni
 		}
 
+		reset() {
+			torsoProgress = 0;
+			headProgress = 0;
+			hand_lProgress = 0;
+			arm_l_bProgress = 0;
+			arm_l_uProgress = 0;
+
+			hand_rProgress = 0;
+			arm_r_bProgress = 0;
+			arm_r_uProgress = 0;
+
+			leg_l_uProgress = 0;
+			leg_r_uProgress = 0;
+			leg_l_bProgress = 0;
+			leg_r_bProgress = 0;
+		}
+
 		simpleDance(GLFWwindow* window, float angle_y) {
 			float danceProgress=0.0f; //Aktualny kąt obrotu obiektu wokół osi y
 			glfwSetTime(0); //Wyzeruj timer
-
+			// // Krok 1
+			torsoVecDirection = vec3(0.0f,1.0f,0.0f);
 			headVecDirection = vec3(0.0f,0.0f,1.0f);
 			hand_lVecDirection = vec3(0.0f,0.0f,1.0f);
 			arm_l_bVecDirection = vec3(1.0f,0.0f,1.0f);
@@ -369,11 +387,74 @@ void initOpenGLProgram(GLFWwindow* window) {
 			leg_r_bVecDirection = vec3(1.0f,0.0f,0.0f);
 
 			// start fali
-			for(int i = 0; i<30; i++) {
+			for(int i = 0; i<150; i++) {
 				// angle_y+=speed_y*glfwGetTime();
 				danceProgress += danceSpeed*glfwGetTime();
 				glfwSetTime(0); //Wyzeruj timer
 
+				torsoProgress = danceProgress*4;
+				headProgress = danceProgress;
+				hand_lProgress = danceProgress;
+				arm_l_bProgress = danceProgress*2;
+				arm_l_uProgress = danceProgress;
+
+				hand_rProgress = danceProgress;
+				arm_r_bProgress = danceProgress*2;
+				arm_r_uProgress = danceProgress;
+
+				leg_l_uProgress = danceProgress;
+				leg_r_uProgress = danceProgress;
+				leg_l_bProgress = danceProgress*4;
+				leg_r_bProgress = danceProgress*1.5;
+				drawScene(window, angle_y); //Wykonaj procedurę rysującą
+
+				if (i % 25 == 0 ) {
+					danceSpeed*=-1;
+				}
+			}
+			// Krok 2
+			for(int i = 0; i<150; i++) {
+				danceProgress += danceSpeed*glfwGetTime();
+				glfwSetTime(0); //Wyzeruj timer
+
+				torsoProgress = -danceProgress*4;
+				headProgress = -danceProgress;
+				hand_lProgress = -danceProgress;
+				arm_l_bProgress = -danceProgress*2;
+				arm_l_uProgress = -danceProgress;
+
+				hand_rProgress = -danceProgress;
+				arm_r_bProgress = -danceProgress*2;
+				arm_r_uProgress = -danceProgress;
+
+				leg_l_uProgress = -danceProgress;
+				leg_r_uProgress = -danceProgress;
+				leg_l_bProgress = danceProgress*4;
+				leg_r_bProgress = danceProgress*1.5;
+				drawScene(window, angle_y); //Wykonaj procedurę rysującą
+
+				if (i % 25 == 0 ) {
+					danceSpeed*=-1;
+				}
+			}
+
+			// Krok 3
+			headVecDirection = vec3(0.0f,1.0f,0.0f);
+			hand_lVecDirection = vec3(0.0f,0.0f,1.0f);
+			arm_l_bVecDirection = vec3(0.0f,0.0f,1.0f);
+			hand_rVecDirection = vec3(0.0f,0.0f,1.0f);
+			arm_r_bVecDirection = vec3(0.0f,0.0f,1.0f);
+			leg_l_uVecDirection = vec3(1.0f,0.0f,0.0f);
+			leg_r_uVecDirection = vec3(1.0f,0.0f,0.0f);
+			leg_l_bVecDirection = vec3(-2.0f,0.0f,0.0f);
+			leg_r_bVecDirection = vec3(2.0f,0.0f,0.0f);
+
+			for(int i = 0; i<200; i++) {
+				// angle_y+=speed_y*glfwGetTime();
+				danceProgress += danceSpeed*glfwGetTime();
+				glfwSetTime(0); //Wyzeruj timer
+
+				torsoProgress = danceProgress;
 				headProgress = danceProgress;
 				hand_lProgress = danceProgress;
 				arm_l_bProgress = danceProgress*2;
@@ -386,59 +467,85 @@ void initOpenGLProgram(GLFWwindow* window) {
 				leg_l_uProgress = danceProgress;
 				leg_r_uProgress = danceProgress;
 				leg_l_bProgress = danceProgress;
-				leg_r_bProgress = danceProgress;
+				leg_r_bProgress = danceProgress*2;
 				drawScene(window, angle_y); //Wykonaj procedurę rysującą
 
-				if (i == 15 ) {
+				if (i % 20 == 0 ) {
 					danceSpeed*=-1;
 				}
-
-
-
-
-			// for(int i = 0; i<60; i++) {
-			// 	danceProgress += danceSpeed*glfwGetTime();
-			// 	glfwSetTime(0); //Wyzeruj timer
-			//
-			// 	headProgress = danceProgress;
-			// 	hand_lProgress = danceProgress;
-			// 	arm_l_bProgress = danceProgress;
-			// 	arm_l_uProgress = danceProgress*5;
-			//
-			// 	hand_rProgress = danceProgress;
-			// 	arm_r_bProgress = danceProgress;
-			// 	arm_r_uProgress = danceProgress*5;
-			//
-			// 	leg_l_uProgress = danceProgress;
-			// 	leg_r_uProgress = danceProgress;
-			// 	drawScene(window, angle_y); //Wykonaj procedurę rysującą
-			// }
-
-
-
-				hand_lProgress = 0;
-				arm_l_bProgress = 0;
-				arm_l_uProgress = 0;
-
-				// hand_lVecDirection = vec3(0.0f,0.0f,-1.0f);
-				// arm_l_bVecDirection = vec3(0.0f,0.0f,-1.0f);
-				// arm_l_uVecDirection = vec3(0.0f,0.0f,-1.0f);
-				//
-				// for(; i<120; i++) {
-				//  danceProgress = danceSpeed*(i/40);
-				// 	hand_lProgress = danceProgress;
-				// 	arm_l_bProgress = danceProgress;
-				// 	arm_l_uProgress = danceProgress;
-				// 	drawScene(window); //Wykonaj procedurę rysującą
-				// }
-
-
-				// for(int i = 0; i<30; i++) {
-				// 	arm_l_bProgress = danceSpeed*glfwGetTime();
-				// 	drawScene(window); //Wykonaj procedurę rysującą
-				// }
-				// arm_l_bProgress = 0;
 			}
+
+			reset();
+
+			// Krok 4 - reverse 3
+			headVecDirection = vec3(0.0f,1.0f,0.0f);
+			hand_lVecDirection = vec3(0.0f,0.0f,1.0f);
+			arm_l_bVecDirection = vec3(0.0f,0.0f,1.0f);
+			hand_rVecDirection = vec3(0.0f,0.0f,1.0f);
+			arm_r_bVecDirection = vec3(1.0f,0.0f,1.0f);
+			leg_l_uVecDirection = vec3(1.0f,0.0f,0.0f);
+			leg_r_uVecDirection = vec3(1.0f,0.0f,0.0f);
+			leg_l_bVecDirection = vec3(2.0f,0.0f,0.0f);
+			leg_r_bVecDirection = vec3(-2.0f,0.0f,0.0f);
+
+			for(int i = 0; i<200; i++) {
+				// angle_y+=speed_y*glfwGetTime();
+				danceProgress += danceSpeed*glfwGetTime();
+				glfwSetTime(0); //Wyzeruj timer
+
+				torsoProgress = -danceProgress;
+				headProgress = -danceProgress;
+				hand_lProgress = -danceProgress;
+				arm_l_bProgress = -danceProgress*2;
+				arm_l_uProgress = -danceProgress;
+
+				hand_rProgress = -danceProgress;
+				arm_r_bProgress = -danceProgress*2;
+				arm_r_uProgress = -danceProgress;
+
+				leg_l_uProgress = -danceProgress;
+				leg_r_uProgress = -danceProgress;
+				leg_l_bProgress = danceProgress*2;
+				leg_r_bProgress = -danceProgress;
+				drawScene(window, angle_y); //Wykonaj procedurę rysującą
+
+				if (i % 20 == 0 ) {
+					danceSpeed*=-1;
+				}
+			}
+			// Krok 5
+			headVecDirection = vec3(0.0f,1.0f,0.0f);
+			hand_lVecDirection = vec3(0.0f,0.0f,1.0f);
+			arm_l_bVecDirection = vec3(0.0f,0.0f,1.0f);
+			hand_rVecDirection = vec3(0.0f,0.0f,1.0f);
+			arm_r_bVecDirection = vec3(0.0f,0.0f,1.0f);
+			leg_l_uVecDirection = vec3(0.0f,0.0f,1.0f);
+			leg_r_uVecDirection = vec3(0.0f,0.0f,1.0f);
+
+			for(int i = 0; i<200; i++) {
+				// angle_y+=speed_y*glfwGetTime();
+				danceProgress += danceSpeed*glfwGetTime();
+				glfwSetTime(0); //Wyzeruj timer
+
+				headProgress = danceProgress;
+				hand_lProgress = danceProgress;
+				arm_l_bProgress = danceProgress*4;
+
+				hand_rProgress = danceProgress;
+				arm_r_bProgress = danceProgress*4;
+
+				if (danceProgress > 0) {
+					leg_r_uProgress = -danceProgress*2;
+				} else {
+					leg_l_uProgress = -danceProgress*2;
+				}
+				drawScene(window, angle_y); //Wykonaj procedurę rysującą
+
+				if (i % 40 == 0 ) {
+					danceSpeed*=-1;
+				}
+			}
+			danceSpeed=0;
 		}
 
 		int main(void)
