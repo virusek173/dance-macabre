@@ -14,6 +14,7 @@
 #include "skeleton.h"
 #include "skeletonModel.h"
 #include "colors.h"
+#include "floor.h"
 
 using namespace glm;
 
@@ -106,7 +107,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 	std::vector<unsigned char> image; //Alokuj wektor do wczytania obrazka
 	unsigned width, height; //Zmienne do których wczytamy wymiary obrazka
 	//Wczytaj obrazek
-	unsigned error = lodepng::decode(image, width, height, "metal.png");
+	unsigned error = lodepng::decode(image, width, height, "metal2.png");
 	//Import do pamięci karty graficznej
 	glGenTextures(1,&tex); //Zainicjuj jeden uchwyt
 	glBindTexture(GL_TEXTURE_2D, tex); //Uaktywnij uchwyt
@@ -147,8 +148,31 @@ void initOpenGLProgram(GLFWwindow* window) {
 			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 			glEnableClientState( GL_NORMAL_ARRAY );
 
-			float lightPos[]={0,0,-1,1};
+			float lightPos[]={-5,5,0,1};
+			float lightPos2[]={5,5,0,1};
+			float direction[]={0,0,-1,0};
+			// float colorsA[]={0.2f,0.2f,0.2f, 1};
+			float colorsD[]={0.8f,0.8f,1, 1};
 			glLightfv(GL_LIGHT0,GL_POSITION,lightPos);
+			glLightfv(GL_LIGHT0,GL_POSITION,lightPos2);
+			glLightfv(GL_LIGHT0,GL_SPOT_DIRECTION,direction);
+
+			glLightfv(GL_LIGHT0,GL_DIFFUSE,colorsD);
+
+			glLightf(GL_LIGHT0,GL_SPOT_CUTOFF,100);
+			glLightf(GL_LIGHT0,GL_SPOT_EXPONENT,128);
+
+			// Render podłogi
+			// torsoMatrix=translate(torsoMatrix,vec3(0.0f,4.0f,0.0f));
+				// torsoMatrix=rotate(torsoMatrix,cameraMoving,torsoVecDirection);
+				mat4 floorMatrix=mat4(1.0f);
+				floorMatrix=rotate(floorMatrix,(PI/2),vec3(0.0f,-1.0f,0.0f));
+				floorMatrix=translate(floorMatrix,vec3(6.0f,-8.0f,0.0f));
+				glLoadMatrixf(value_ptr(V*floorMatrix));
+			glVertexPointer(3,GL_FLOAT,0, floorPositions);
+			glNormalPointer( GL_FLOAT, 0, floorNormals);
+			glTexCoordPointer( 2, GL_FLOAT, 0, floorPositions);
+			glDrawArrays(GL_QUADS,0,floorVertices); //Rysuj model
 
 			// Render torsu
 			mat4 torsoMatrix=mat4(1.0f);
@@ -157,7 +181,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 			glLoadMatrixf(value_ptr(V*torsoMatrix));
 			glVertexPointer(4,GL_FLOAT,0, torsoPositions);
 			glNormalPointer( GL_FLOAT, 0, torsoNormals);
-			glTexCoordPointer( 2, GL_FLOAT, 0, torsoTexels);
+			glTexCoordPointer( 4, GL_FLOAT, 0, torsoTexels);
 			glDrawArrays(GL_QUADS,0,torsoVertices); //Rysuj model
 
 			// Render głowy
@@ -332,8 +356,6 @@ void initOpenGLProgram(GLFWwindow* window) {
 			float danceProgress=0.0f; //Aktualny kąt obrotu obiektu wokół osi y
 			glfwSetTime(0); //Wyzeruj timer
 
-			drawScene(window, angle_y); // załadowanie sceny początkowej
-
 			headVecDirection = vec3(0.0f,0.0f,1.0f);
 			hand_lVecDirection = vec3(0.0f,0.0f,1.0f);
 			arm_l_bVecDirection = vec3(1.0f,0.0f,1.0f);
@@ -346,7 +368,6 @@ void initOpenGLProgram(GLFWwindow* window) {
 			leg_l_bVecDirection = vec3(-1.0f,0.0f,0.0f);
 			leg_r_bVecDirection = vec3(1.0f,0.0f,0.0f);
 
-			if (danceSpeed) { // tancz po kliknięciu '1'
 			// start fali
 			for(int i = 0; i<30; i++) {
 				// angle_y+=speed_y*glfwGetTime();
@@ -371,7 +392,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 				if (i == 15 ) {
 					danceSpeed*=-1;
 				}
-			}
+
 
 
 
@@ -466,12 +487,14 @@ void initOpenGLProgram(GLFWwindow* window) {
 				angle_x+=speed_x*glfwGetTime(); //Oblicz przyrost kąta obrotu i zwiększ aktualny kąt
 				// angle_y+=(PI/2)*glfwGetTime(); //Oblicz przyrost kąta obrotu i zwiększ aktualny kąt
 				glfwSetTime(0); //Wyzeruj timer
+				drawScene(window, angle_y); // załadowanie sceny początkowej
 
 				// wywołanie tanców
-				simpleDance(window, angle_y);
-
-				// for(int i=0; i< 100; i++) {
-				// 	drawScene(window,(PI/2)*glfwGetTime(),"head",'y'); //Wykonaj procedurę rysującą
+				if (danceSpeed) { // tancz po kliknięciu '1'
+					simpleDance(window, angle_y);
+				}
+			// for(int i=0; i< 100; i++) {
+			// 	drawScene(window,(PI/2)*glfwGetTime(),"head",'y'); //Wykonaj procedurę rysującą
 				// }
 					// drawScene(window,(PI/2)*glfwGetTime(),"head",'y'); //Wykonaj procedurę rysującą
 
