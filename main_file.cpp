@@ -15,13 +15,15 @@
 #include "skeletonModel.h"
 #include "colors.h"
 #include "floor.h"
+#include "myCube.h"
 
 using namespace glm;
 
 float aspect=1.0f; //Aktualny stosunek szerokości do wysokości okna
 float speed_x=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi x
 float speed_y=PI/4; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
-float danceSpeed=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
+float firstDanceSpeed=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
+float secondDanceSpeed=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
 float torsoProgress=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
 float headProgress=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
 float arm_r_uProgress=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
@@ -30,6 +32,7 @@ float hand_rProgress=0; //Szybkość kątowa obrotu obiektu w radianach na sekun
 float leg_r_uProgress=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
 float leg_r_bProgress=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
 float foot_rProgress=0; //Szybkość kątowa obrotu obiektu w radianach na sekundę wokół osi y
+bool tempbool=false;
 
 vec3 torsoVecDirection = vec3(0.0f,0.0f,0.0f);
 vec3 headVecDirection = vec3(0.0f,0.0f,0.0f);
@@ -54,7 +57,9 @@ vec3 leg_l_uVecDirection = vec3(0.0f,0.0f,0.0f);
 vec3 leg_l_bVecDirection = vec3(0.0f,0.0f,0.0f);
 vec3 foot_lVecDirection = vec3(0.0f,0.0f,0.0f);
 
-GLuint tex; //uchwyt do obrazka tekstury
+// GLuint tex; //uchwyt do obrazka tekstury
+// GLuint tex2; //uchwyt do obrazka tekstury
+GLuint *tex = new GLuint[2];
 
 //Procedura obsługi błędów
 void error_callback(int error, const char* description) {
@@ -75,7 +80,8 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 		if (key == GLFW_KEY_RIGHT) speed_y=PI/4;
 		if (key == GLFW_KEY_UP) speed_x=PI/2;
 		if (key == GLFW_KEY_DOWN) speed_x=-PI/2;
-		if (key == GLFW_KEY_1) danceSpeed=PI/2;
+		if (key == GLFW_KEY_1) firstDanceSpeed=PI/2;
+		if (key == GLFW_KEY_2) secondDanceSpeed=PI/2;
 	}
 
 	if (action == GLFW_RELEASE) {
@@ -104,23 +110,42 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 	//Wczytanie i import obrazka – w initOpenGLProgram
 	//Wczytanie do pamięci komputera
-	std::vector<unsigned char> image; //Alokuj wektor do wczytania obrazka
-	unsigned width, height; //Zmienne do których wczytamy wymiary obrazka
+	std::vector<unsigned char> image, image2; //Alokuj wektor do wczytania obrazka
+	unsigned width, height, width2, height2;  //Zmienne do których wczytamy wymiary obrazka
 	//Wczytaj obrazek
-	unsigned error = lodepng::decode(image, width, height, "metal2.png");
 	//Import do pamięci karty graficznej
-	glGenTextures(1,&tex); //Zainicjuj jeden uchwyt
-	glBindTexture(GL_TEXTURE_2D, tex); //Uaktywnij uchwyt
+	glGenTextures(2, tex);
+	// glGenTextures(1,&tex); //Zainicjuj jeden uchwyt
+	// glGenTextures(1,&tex2); //Zainicjuj jeden uchwyt
+	glBindTexture(GL_TEXTURE_2D, tex[0]); //Uaktywnij uchwyt
+	unsigned error = lodepng::decode(image, width, height, "metal2.png");
 	//Wczytaj obrazek do pamięci KG skojarzonej z uchwytem
 	glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,
 		GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*) image.data());
-		//
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glGenerateMipmap(GL_TEXTURE_2D);
+
+		glBindTexture(GL_TEXTURE_2D, tex[1]); //Uaktywnij uchwyt
+		unsigned error2 = lodepng::decode(image, width, height, "speaker.png");
+		glTexImage2D(GL_TEXTURE_2D, 0, 4, width, height, 0,
+			GL_RGBA, GL_UNSIGNED_BYTE, (unsigned char*) image.data());
+
+		// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		// glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glGenerateMipmap(GL_TEXTURE_2D);
 	}
 
 	//Procedura rysująca zawartość sceny
-	void drawScene(GLFWwindow* window, float cameraMoving) {
+	void drawScene(GLFWwindow* window) {
 		//************Tutaj umieszczaj kod rysujący obraz******************l
 		mat4 M,R,T,S,I;
 
@@ -161,6 +186,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 			glLightf(GL_LIGHT0,GL_SPOT_CUTOFF,100);
 			glLightf(GL_LIGHT0,GL_SPOT_EXPONENT,128);
+			glBindTexture(GL_TEXTURE_2D, tex[0]); //Uaktywnij uchwyt
 
 			// Render podłogi
 				mat4 floorMatrix=mat4(1.0f);
@@ -172,16 +198,39 @@ void initOpenGLProgram(GLFWwindow* window) {
 			glTexCoordPointer( 2, GL_FLOAT, 0, floorPositions);
 			glDrawArrays(GL_QUADS,0,floorVertices); //Rysuj model
 
+			glBindTexture(GL_TEXTURE_2D, tex[1]); //Uaktywnij uchwyt
+
+			// Render Głośników
+			mat4 speakerMatrix=floorMatrix;
+			// floorMatrix=rotate(floorMatrix,(PI/2),vec3(0.0f,-1.0f,0.0f));
+			speakerMatrix=translate(speakerMatrix,vec3(-15.0f,5.0f,-10.0f));
+			glLoadMatrixf(value_ptr(V*speakerMatrix));
+		glVertexPointer(3,GL_FLOAT,0, myCubeVertices);
+		glNormalPointer( GL_FLOAT, 0, myCubeVertices);
+		glTexCoordPointer( 3, GL_FLOAT, 0, myCubeVertices);
+		glDrawArrays(GL_QUADS,0,myCubeVertexCount); //Rysuj model
+
+			mat4 speaker2Matrix=floorMatrix;
+			// floorMatrix=rotate(floorMatrix,(PI/2),vec3(0.0f,-1.0f,0.0f));
+			speaker2Matrix=translate(speaker2Matrix,vec3(-15.0f,5.0f,10.0f));
+			glLoadMatrixf(value_ptr(V*speaker2Matrix));
+		glVertexPointer(3,GL_FLOAT,0, myCubeVertices);
+		glNormalPointer( GL_FLOAT, 0, myCubeVertices);
+		glTexCoordPointer( 3, GL_FLOAT, 0, myCubeVertices);
+		glDrawArrays(GL_QUADS,0,myCubeVertexCount); //Rysuj model
+
+		glBindTexture(GL_TEXTURE_2D, tex[0]); //Uaktywnij uchwyt
+
 			// Render torsu
 			mat4 torsoMatrix=mat4(1.0f);
 			torsoMatrix=translate(torsoMatrix,vec3(0.0f,4.0f,0.0f));
-			if (headProgress) {
+			if (torsoProgress) {
 				torsoMatrix=rotate(torsoMatrix,torsoProgress,torsoVecDirection);
 			}
 			glLoadMatrixf(value_ptr(V*torsoMatrix));
 			glVertexPointer(4,GL_FLOAT,0, torsoPositions);
 			glNormalPointer( GL_FLOAT, 0, torsoNormals);
-			glTexCoordPointer( 4, GL_FLOAT, 0, torsoTexels);
+			glTexCoordPointer( 3, GL_FLOAT, 0, torsoTexels);
 			glDrawArrays(GL_QUADS,0,torsoVertices); //Rysuj model
 
 			// Render głowy
@@ -369,7 +418,8 @@ void initOpenGLProgram(GLFWwindow* window) {
 			leg_r_bProgress = 0;
 		}
 
-		simpleDance(GLFWwindow* window, float angle_y) {
+		simpleDance(GLFWwindow* window) {
+			reset();
 			float danceProgress=0.0f; //Aktualny kąt obrotu obiektu wokół osi y
 			glfwSetTime(0); //Wyzeruj timer
 			// // Krok 1
@@ -389,7 +439,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 			// start fali
 			for(int i = 0; i<150; i++) {
 				// angle_y+=speed_y*glfwGetTime();
-				danceProgress += danceSpeed*glfwGetTime();
+				danceProgress += firstDanceSpeed*glfwGetTime();
 				glfwSetTime(0); //Wyzeruj timer
 
 				torsoProgress = danceProgress*4;
@@ -406,15 +456,15 @@ void initOpenGLProgram(GLFWwindow* window) {
 				leg_r_uProgress = danceProgress;
 				leg_l_bProgress = danceProgress*4;
 				leg_r_bProgress = danceProgress*1.5;
-				drawScene(window, angle_y); //Wykonaj procedurę rysującą
+				drawScene(window); //Wykonaj procedurę rysującą
 
 				if (i % 25 == 0 ) {
-					danceSpeed*=-1;
+					firstDanceSpeed*=-1;
 				}
 			}
 			// Krok 2
 			for(int i = 0; i<150; i++) {
-				danceProgress += danceSpeed*glfwGetTime();
+				danceProgress += firstDanceSpeed*glfwGetTime();
 				glfwSetTime(0); //Wyzeruj timer
 
 				torsoProgress = -danceProgress*4;
@@ -431,10 +481,10 @@ void initOpenGLProgram(GLFWwindow* window) {
 				leg_r_uProgress = -danceProgress;
 				leg_l_bProgress = danceProgress*4;
 				leg_r_bProgress = danceProgress*1.5;
-				drawScene(window, angle_y); //Wykonaj procedurę rysującą
+				drawScene(window); //Wykonaj procedurę rysującą
 
 				if (i % 25 == 0 ) {
-					danceSpeed*=-1;
+					firstDanceSpeed*=-1;
 				}
 			}
 
@@ -451,7 +501,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 			for(int i = 0; i<200; i++) {
 				// angle_y+=speed_y*glfwGetTime();
-				danceProgress += danceSpeed*glfwGetTime();
+				danceProgress += firstDanceSpeed*glfwGetTime();
 				glfwSetTime(0); //Wyzeruj timer
 
 				torsoProgress = danceProgress;
@@ -468,14 +518,14 @@ void initOpenGLProgram(GLFWwindow* window) {
 				leg_r_uProgress = danceProgress;
 				leg_l_bProgress = danceProgress;
 				leg_r_bProgress = danceProgress*2;
-				drawScene(window, angle_y); //Wykonaj procedurę rysującą
+				drawScene(window); //Wykonaj procedurę rysującą
 
 				if (i % 20 == 0 ) {
-					danceSpeed*=-1;
+					firstDanceSpeed*=-1;
 				}
 			}
 
-			reset();
+			// reset();
 
 			// Krok 4 - reverse 3
 			headVecDirection = vec3(0.0f,1.0f,0.0f);
@@ -490,7 +540,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 			for(int i = 0; i<200; i++) {
 				// angle_y+=speed_y*glfwGetTime();
-				danceProgress += danceSpeed*glfwGetTime();
+				danceProgress += firstDanceSpeed*glfwGetTime();
 				glfwSetTime(0); //Wyzeruj timer
 
 				torsoProgress = -danceProgress;
@@ -507,10 +557,10 @@ void initOpenGLProgram(GLFWwindow* window) {
 				leg_r_uProgress = -danceProgress;
 				leg_l_bProgress = danceProgress*2;
 				leg_r_bProgress = -danceProgress;
-				drawScene(window, angle_y); //Wykonaj procedurę rysującą
+				drawScene(window); //Wykonaj procedurę rysującą
 
 				if (i % 20 == 0 ) {
-					danceSpeed*=-1;
+					firstDanceSpeed*=-1;
 				}
 			}
 			// Krok 5
@@ -524,7 +574,7 @@ void initOpenGLProgram(GLFWwindow* window) {
 
 			for(int i = 0; i<200; i++) {
 				// angle_y+=speed_y*glfwGetTime();
-				danceProgress += danceSpeed*glfwGetTime();
+				danceProgress += firstDanceSpeed*glfwGetTime();
 				glfwSetTime(0); //Wyzeruj timer
 
 				headProgress = danceProgress;
@@ -539,13 +589,141 @@ void initOpenGLProgram(GLFWwindow* window) {
 				} else {
 					leg_l_uProgress = -danceProgress*2;
 				}
-				drawScene(window, angle_y); //Wykonaj procedurę rysującą
+				drawScene(window); //Wykonaj procedurę rysującą
 
 				if (i % 40 == 0 ) {
-					danceSpeed*=-1;
+					firstDanceSpeed*=-1;
 				}
 			}
-			danceSpeed=0;
+			firstDanceSpeed=0;
+		}
+
+		hardcoreDance(GLFWwindow* window) {
+			reset();
+			float danceProgress=0.0f; //Aktualny kąt obrotu obiektu wokół osi y
+			glfwSetTime(0); //Wyzeruj timer
+			// Krok 3
+			headVecDirection = vec3(0.0f,1.0f,0.0f);
+			hand_rVecDirection = vec3(0.0f,0.0f,1.0f);
+			arm_r_bVecDirection = vec3(0.0f,0.0f,1.0f);
+			//1
+			torsoVecDirection = vec3(0.0f,1.0f,0.0f);
+
+			arm_l_uVecDirection = vec3(0.0f,1.0f,0.0f);
+			arm_r_uVecDirection = vec3(0.0f,1.0f,0.0f);
+			arm_l_bVecDirection = vec3(0.0f,0.0f,1.0f);
+			hand_lVecDirection = vec3(0.0f,0.0f,1.0f);
+			leg_l_uVecDirection = vec3(1.0f,0.0f,0.0f);
+			leg_r_uVecDirection = vec3(1.0f,0.0f,0.0f);
+			leg_l_bVecDirection = vec3(-1.0f,0.0f,0.0f);
+			leg_r_bVecDirection = vec3(-1.0f,0.0f,0.0f);
+			for(int i = 0; i<240; i++) {
+				danceProgress += secondDanceSpeed*glfwGetTime();
+				glfwSetTime(0); //Wyzeruj timer
+
+				// headProgress = danceProgress;
+				// hand_lProgress = danceProgress;
+				// arm_l_bProgress = danceProgress*2;
+				// arm_l_uProgress = danceProgress;
+				//
+				// hand_rProgress = danceProgress;
+				// arm_r_bProgress = danceProgress*2;
+				// arm_r_uProgress = danceProgress;
+
+				if (i % 80 == 0) {
+					tempbool = !tempbool;
+				}
+
+				if (tempbool) {
+					torsoProgress = danceProgress;
+					arm_r_uProgress = -danceProgress*2;
+					leg_r_uProgress = danceProgress*2;
+					leg_r_bProgress = danceProgress*2;
+				} else {
+					torsoProgress = -danceProgress;
+					arm_l_uProgress = danceProgress*2;
+					leg_l_uProgress = danceProgress*2;
+					leg_l_bProgress = danceProgress*2;
+				}
+
+				drawScene(window); //Wykonaj procedurę rysującą
+
+				if (i % 40 == 0 ) {
+					secondDanceSpeed*=-1;
+				}
+			}
+			tempbool=true;
+			// 2
+			arm_l_uVecDirection = vec3(0.0f,1.0f,0.0f);
+			arm_r_uVecDirection = vec3(0.0f,1.0f,0.0f);
+
+			for(int i = 0; i<200; i++) {
+				danceProgress += secondDanceSpeed*glfwGetTime();
+				glfwSetTime(0); //Wyzeruj timer
+				if (i == 20) {
+					tempbool = !tempbool;
+				}
+				if (i == 120) {
+					tempbool = !tempbool;
+				}
+
+				if (tempbool) {
+					torsoProgress = danceProgress;
+				} else {
+					arm_r_uProgress = -danceProgress*2;
+					arm_l_uProgress = danceProgress*2;
+				}
+
+				drawScene(window); //Wykonaj procedurę rysującą
+
+				if (i % 40 == 0 ) {
+					secondDanceSpeed*=-1;
+				}
+			}
+
+			//3
+
+			arm_l_bVecDirection = vec3(0.0f,0.0f,1.0f);
+			arm_r_bVecDirection = vec3(0.0f,0.0f,1.0f);
+			headVecDirection = vec3(1.0f,0.0f,0.0f);
+
+			for(int i = 0; i<200; i++) {
+				danceProgress += secondDanceSpeed*glfwGetTime();
+				glfwSetTime(0); //Wyzeruj timer
+
+				// headProgress = danceProgress;
+				// hand_lProgress = danceProgress;
+				// arm_l_bProgress = danceProgress*2;
+				// arm_l_uProgress = danceProgress;
+				//
+				// hand_rProgress = danceProgress;
+				// arm_r_bProgress = danceProgress*2;
+				// arm_r_uProgress = danceProgress;
+
+				if (i % 40 == 0) {
+					tempbool = !tempbool;
+				}
+				torsoProgress = danceProgress;
+
+				if (tempbool) {
+					headProgress = -danceProgress;
+					arm_l_bProgress = -danceProgress*2;
+					arm_r_bProgress = danceProgress*2;
+				} else {
+					headProgress = -danceProgress;
+					arm_l_bProgress = -danceProgress*2;
+					arm_r_bProgress = danceProgress*2;
+				}
+
+				drawScene(window); //Wykonaj procedurę rysującą
+
+				if (i % 40 == 0 ) {
+					secondDanceSpeed*=-1;
+				}
+			}
+
+			secondDanceSpeed=0;
+			tempbool=false;
 		}
 
 		int main(void)
@@ -583,27 +761,21 @@ void initOpenGLProgram(GLFWwindow* window) {
 			float angle_y=0.0f; //Aktualny kąt obrotu obiektu wokół osi y
 			glfwSetTime(0); //Wyzeruj timer
 
-			// while(1) {
-			// 	drawScene(window,angle_x,angle_y); //Wykonaj procedurę rysującą
-			// 	angle_y+=PI/20*glfwGetTime();
-			// }
 
 			//Główna pętla
 			while (!glfwWindowShouldClose(window)) //Tak długo jak okno nie powinno zostać zamknięte
 			{
 				angle_x+=speed_x*glfwGetTime(); //Oblicz przyrost kąta obrotu i zwiększ aktualny kąt
-				// angle_y+=(PI/2)*glfwGetTime(); //Oblicz przyrost kąta obrotu i zwiększ aktualny kąt
 				glfwSetTime(0); //Wyzeruj timer
-				drawScene(window, angle_y); // załadowanie sceny początkowej
+				drawScene(window); // załadowanie sceny początkowej
 
 				// wywołanie tanców
-				if (danceSpeed) { // tancz po kliknięciu '1'
-					simpleDance(window, angle_y);
+				if (firstDanceSpeed) { // taniec pierwszy po kliknięciu '1'
+					simpleDance(window);
 				}
-			// for(int i=0; i< 100; i++) {
-			// 	drawScene(window,(PI/2)*glfwGetTime(),"head",'y'); //Wykonaj procedurę rysującą
-				// }
-					// drawScene(window,(PI/2)*glfwGetTime(),"head",'y'); //Wykonaj procedurę rysującą
+				if (secondDanceSpeed) { // taniec drtugi po kliknięciu '2'
+					hardcoreDance(window);
+				}
 
 				glfwPollEvents(); //Wykonaj procedury callback w zalezności od zdarzeń jakie zaszły.
 			}
